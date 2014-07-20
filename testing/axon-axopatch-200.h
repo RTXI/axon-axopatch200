@@ -19,11 +19,26 @@ class AxoPatch : public DefaultGUIModel {
 		enum AmpMode_t {
 			ICLAMP = 0,
 			VCLAMP = 2,
-			NONE = 3
 		};
+/*
+		enum AmpGain_t {
+			Ghalf = .5,
+			G1 = 1,
+			G2 = 2,
+			G5 = 5,
+			G10 = 10,
+			G20 = 20,
+			G50 = 50,
+			G100 = 100,
+			G200 = 200,
+			G500 = 500
+		};
+*/
 	
 		int input_channel, output_channel;
 		double vclamp_gain, iclamp_gain;
 	
-		QPushButton *iclamp_button, *vclamp_button, *none_button;
+		QPushButton *iclampButton, *vclampButton, *autoButton;
+		QSpinBox *inputBox, *outputBox;
+		QComboBox *headstageBox, *outputGainBox;
 };
