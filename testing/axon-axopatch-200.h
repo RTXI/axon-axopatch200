@@ -1,4 +1,5 @@
 #include <QtGui>
+#include <daq.h>
 #include <default_gui_model.h>
 
 class AxoPatch : public DefaultGUIModel {
@@ -11,34 +12,45 @@ class AxoPatch : public DefaultGUIModel {
 	
 		void initParameters(void);
 		void customizeGUI(void);
+		void execute(void);
+		void updateDAQ(void);
 	
 	protected:
 		virtual void update(DefaultGUIModel::update_flags_t);
 
 	private:
-		enum AmpMode_t {
-			ICLAMP = 0,
-			VCLAMP = 2,
-		};
-/*
-		enum AmpGain_t {
-			Ghalf = .5,
-			G1 = 1,
-			G2 = 2,
-			G5 = 5,
-			G10 = 10,
-			G20 = 20,
-			G50 = 50,
-			G100 = 100,
-			G200 = 200,
-			G500 = 500
-		};
-*/
-	
+		double iclamp_ai_gain; // (1 V / V)
+		double iclamp_ao_gain; // (2 nA / V) ...hmm
+		double izero_ai_gain; // (1 V / V)
+		double izero_ao_gain; // No output
+		double vclamp_ai_gain; // 1 mV / pA
+		double vclamp_ao_gain; // 20 mV / V
+//		const double iclamp_out_gain;
+//		const double vclamp_out_gain;
+
 		int input_channel, output_channel;
-		double vclamp_gain, iclamp_gain;
+		int output_ui_index;
+		double output_gain, temp_gain, headstage_gain;
+		/**/double scaled_gain;
+		int headstage_config;
+		int amp_mode, temp_mode;
+		
+		bool auto_on, settings_changed;
+
+		DAQ::Device *device;
 	
-		QPushButton *iclampButton, *vclampButton, *autoButton;
+		QPushButton /* *iclampButton, *vclampButton,*/ *autoButton;
+		QRadioButton *iclampButton, *vclampButton;
+		QButtonGroup *ampButtonGroup;
 		QSpinBox *inputBox, *outputBox;
 		QComboBox *headstageBox, *outputGainBox;
+		QLabel *ampModeLabel;
+
+	private slots:
+		void updateMode(int);
+		void updateOutputGain(int);
+		void updateHeadstageBox(int);
+		void updateInputChannel(int);
+		void updateOutputChannel(int);
+		void toggleAutoMode(bool);
 };
