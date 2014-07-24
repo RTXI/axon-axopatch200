@@ -60,7 +60,7 @@ static void getDevice(DAQ::Device *d, void *p) {
 	if (!*device) *device = d;
 }
 
-AxoPatch::AxoPatch(void) : DefaultGUIModel("Axon AxoPatch 200 Controller", ::vars, ::num_vars) {
+AxoPatch::AxoPatch(void) : DefaultGUIModel("AxoPatch 200 Controller", ::vars, ::num_vars) {
 	setWhatsThis("<p>Yeah, I'll get to this later... <br>-Ansel</p>");
 	DefaultGUIModel::createGUI(vars, num_vars);
 	initParameters();
@@ -72,11 +72,13 @@ AxoPatch::AxoPatch(void) : DefaultGUIModel("Axon AxoPatch 200 Controller", ::var
 AxoPatch::~AxoPatch(void) {};
 
 void AxoPatch::initParameters(void) {
-	input_channel = 1;
-	output_channel = 2;
+	input_channel = 0;
+	output_channel = 0;
 	amp_mode = 1;
-	auto_on = false;
 	output_gain = headstage_gain = 1;
+
+	device = 0;
+	DAQ::Manager::getInstance()->foreachDevice(getDevice, &device);
 
 	iclamp_ai_gain = 1; // (1 V/V)
 	iclamp_ao_gain = 1.0 / 2e-9; // (2 nA/V)
@@ -143,10 +145,6 @@ void AxoPatch::update(DefaultGUIModel::update_flags_t flag) {
 }
 
 void AxoPatch::execute(void) {
-/*	if (!auto_on) {
-		return;
-	}*/
-
 	if (input(0) < 3) temp_mode = 1; //ICLAMP
 	else temp_mode = 2; //VCLAMP
 	
@@ -338,11 +336,6 @@ void AxoPatch::updateInputChannel(int value) {
 void AxoPatch::updateDAQ(void) {
 	if (!device) return;
 
-	std::cout<<"Nope, didn't return"<<std::endl;
-	std::cout<<"Data\t"<<amp_mode<<"\t"<<input_channel<<"\t"<<output_channel<<"\t"<<output_gain<<"\t"<<headstage_gain<<std::endl;
-	std::cout<<iclamp_ai_gain<<"\t"<<iclamp_ao_gain<<"\t"<<vclamp_ai_gain<<"\t"<<vclamp_ao_gain<<std::endl<<std::endl;
-//	return;
-	
 	switch(amp_mode) {
 		case 1: //IClamp
 			device->setAnalogRange(DAQ::AI, input_channel, 0);
@@ -380,7 +373,6 @@ void AxoPatch::customizeGUI(void) {
 	QGridLayout *customLayout = DefaultGUIModel::getLayout();
 	
 	customLayout->itemAtPosition(1,0)->widget()->setVisible(false);
-//	customLayout->itemAtPosition(10,0)->widget()->setVisible(false);
 	DefaultGUIModel::pauseButton->setText("Auto");
 	DefaultGUIModel::modifyButton->setText("Set DAQ");
 	DefaultGUIModel::unloadButton->setVisible(false);
@@ -440,20 +432,18 @@ void AxoPatch::customizeGUI(void) {
 	ampModeLabel->setText("Amp Mode");
 	ampModeLabel->setAlignment(Qt::AlignCenter);
 
-	QVBoxLayout *row2Layout = new QVBoxLayout;
-	row2Layout->addWidget(ampModeLabel);
-	ampModeBoxLayout->addLayout(row2Layout);
+	QVBoxLayout *col1Layout = new QVBoxLayout;
+	col1Layout->addWidget(ampModeLabel);
+	ampModeBoxLayout->addLayout(col1Layout);
 	
-	QVBoxLayout *row1Layout = new QVBoxLayout;
-//	row1Layout->setAlignment(Qt::AlignRight);
-	row1Layout->addWidget(iclampButton);
-	row1Layout->addWidget(vclampButton);
+	QVBoxLayout *col2Layout = new QVBoxLayout;
+	col2Layout->addWidget(iclampButton);
+	col2Layout->addWidget(vclampButton);
 	ampButtonGroup->setExclusive(true);
-	ampModeBoxLayout->addLayout(row1Layout);
+	ampModeBoxLayout->addLayout(col2Layout);
 
 	// add widgets to custom layout
 	customLayout->addWidget(ioBox, 0, 0);
-//	customLayout->addLayout(comboBoxLayout, 2, 0);
 	customLayout->addWidget(comboBoxGroup, 2, 0);
 	customLayout->addWidget(ampModeBox, 3, 0);
 	setLayout(customLayout);
@@ -479,6 +469,19 @@ void AxoPatch::refresh(void) {
 	}
 	pauseButton->setChecked(!getActive());
 
+	if (getActive()) {
+		switch(amp_mode) {
+			case 1:
+				ampModeLabel->setText("IClamp");
+				break;
+			case 2:
+				ampModeLabel->setText("VClamp");
+				break;
+			default:
+				break;
+		}
+	}
+	
 	if (settings_changed) {
 		updateDAQ();
 		settings_changed = false;

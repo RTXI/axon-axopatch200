@@ -62,8 +62,7 @@ class AxoPatch : public DefaultGUIModel {
 		double output_gain, temp_gain, headstage_gain;
 		int amp_mode, temp_mode;
 		
-		bool auto_on, settings_changed;
-		bool testflag;
+		bool settings_changed;
 
 		DAQ::Device *device;
 	
