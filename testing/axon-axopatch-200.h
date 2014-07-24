@@ -2,6 +2,36 @@
 #include <daq.h>
 #include <default_gui_model.h>
 
+class AxoPatchComboBox : public QComboBox {
+
+	Q_OBJECT
+
+	public:
+		AxoPatchComboBox(QWidget * =0);
+		~AxoPatchComboBox(void);
+		void blacken(void);
+		QPalette palette;
+
+	public slots:
+		void redden(void);
+};
+
+
+class AxoPatchSpinBox : public QSpinBox {
+
+	Q_OBJECT
+
+	public:
+		AxoPatchSpinBox(QWidget * =0);
+		~AxoPatchSpinBox(void);
+		void blacken(void);
+		QPalette palette;
+
+	public slots:
+		void redden(void);
+};
+
+
 class AxoPatch : public DefaultGUIModel {
 	
 	Q_OBJECT
@@ -14,6 +44,8 @@ class AxoPatch : public DefaultGUIModel {
 		void customizeGUI(void);
 		void execute(void);
 		void updateDAQ(void);
+		void updateGUI(void);
+		void refresh(void);
 	
 	protected:
 		virtual void update(DefaultGUIModel::update_flags_t);
@@ -25,32 +57,26 @@ class AxoPatch : public DefaultGUIModel {
 		double izero_ao_gain; // No output
 		double vclamp_ai_gain; // 1 mV / pA
 		double vclamp_ao_gain; // 20 mV / V
-//		const double iclamp_out_gain;
-//		const double vclamp_out_gain;
 
 		int input_channel, output_channel;
-		int output_ui_index;
 		double output_gain, temp_gain, headstage_gain;
-		/**/double scaled_gain;
-		int headstage_config;
 		int amp_mode, temp_mode;
 		
 		bool auto_on, settings_changed;
+		bool testflag;
 
 		DAQ::Device *device;
 	
-		QPushButton /* *iclampButton, *vclampButton,*/ *autoButton;
 		QRadioButton *iclampButton, *vclampButton;
 		QButtonGroup *ampButtonGroup;
-		QSpinBox *inputBox, *outputBox;
-		QComboBox *headstageBox, *outputGainBox;
+		AxoPatchSpinBox *inputBox, *outputBox;
+		AxoPatchComboBox *headstageBox, *outputGainBox;
 		QLabel *ampModeLabel;
 
 	private slots:
 		void updateMode(int);
 		void updateOutputGain(int);
-		void updateHeadstageBox(int);
+		void updateHeadstageGain(int);
 		void updateInputChannel(int);
 		void updateOutputChannel(int);
-		void toggleAutoMode(bool);
 };

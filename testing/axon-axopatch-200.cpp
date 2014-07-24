@@ -1,7 +1,42 @@
 #include <QtGui>
 #include <iostream>
-//#include <daq.h>
 #include "axon-axopatch-200.h"
+
+AxoPatchComboBox::AxoPatchComboBox(QWidget *parent) : QComboBox(parent) {
+	QObject::connect(this, SIGNAL(activated(int)), this, SLOT(redden(void)));
+}
+
+AxoPatchComboBox::~AxoPatchComboBox(void) {}
+
+void AxoPatchComboBox::blacken(void) {
+	palette.setColor(QPalette::Text, Qt::black);
+	this->setPalette(palette);
+}
+
+void AxoPatchComboBox::redden(void) {
+	palette.setColor(QPalette::Text, Qt::red);
+	this->setPalette(palette);
+}
+
+
+
+AxoPatchSpinBox::AxoPatchSpinBox(QWidget *parent) : QSpinBox(parent) {
+	QObject::connect(this, SIGNAL(valueChanged(int)), this, SLOT(redden(void)));
+}
+
+AxoPatchSpinBox::~AxoPatchSpinBox(void) {}
+
+void AxoPatchSpinBox::blacken(void) {
+	palette.setColor(QPalette::Text, Qt::black);
+	this->setPalette(palette);
+}
+
+void AxoPatchSpinBox::redden(void) {
+	palette.setColor(QPalette::Text, Qt::red);
+	this->setPalette(palette);
+}
+
+
 
 extern "C" Plugin::Object * createRTXIPlugin(void) {
 	return new AxoPatch();
@@ -12,8 +47,8 @@ static DefaultGUIModel::variable_t vars[] = {
 	{ "Gain Telegraph", "", DefaultGUIModel::INPUT, },
 	{ "Input Channel", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, },
 	{ "Output Channel", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, },
-	{ "Headstage Configuration", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, },
-	{ "Output Gain", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, }, 
+	{ "Headstage Gain", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::DOUBLE, },
+	{ "Output Gain", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::DOUBLE, }, 
 	{ "Amplifier Mode", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, },
 };
 
@@ -31,19 +66,17 @@ AxoPatch::AxoPatch(void) : DefaultGUIModel("Axon AxoPatch 200 Controller", ::var
 	initParameters();
 	customizeGUI();
 	update( INIT );
-	refresh();
+	DefaultGUIModel::refresh();
 };
 
 AxoPatch::~AxoPatch(void) {};
 
 void AxoPatch::initParameters(void) {
-	input_channel = 0;
-	output_channel = 1;
-	output_ui_index = 0;
-	headstage_config = 0;
+	input_channel = 1;
+	output_channel = 2;
 	amp_mode = 1;
 	auto_on = false;
-	output_gain = headstage_gain = 0;
+	output_gain = headstage_gain = 1;
 
 	iclamp_ai_gain = 1; // (1 V/V)
 	iclamp_ao_gain = 1.0 / 2e-9; // (2 nA/V)
@@ -51,8 +84,6 @@ void AxoPatch::initParameters(void) {
 	izero_ao_gain = 0; // No output
 	vclamp_ai_gain = 1e-12/1e-3; // (1 mV/pA)
 	vclamp_ao_gain = 1 / 20e-3; // (20 mV/V)
-//	iclamp_out_gain;
-//	vclamp_out_gain;
 };
 
 void AxoPatch::update(DefaultGUIModel::update_flags_t flag) {
@@ -60,43 +91,50 @@ void AxoPatch::update(DefaultGUIModel::update_flags_t flag) {
 		case INIT:
 			setParameter("Input Channel", input_channel);
 			setParameter("Output Channel", output_channel);
-			setParameter("Headstage Configuration", headstage_config);
-			setParameter("Output Gain", output_ui_index);
+			setParameter("Headstage Gain", headstage_gain);
+			setParameter("Output Gain", output_gain);
 			setParameter("Amplifier Mode", amp_mode);
 
-			inputBox->blockSignals(true);
-			inputBox->setValue(input_channel);
-			inputBox->blockSignals(false);
-			outputBox->blockSignals(true);
-			outputBox->setValue(output_channel);
-			outputBox->blockSignals(false);
-			ampButtonGroup->blockSignals(true);
-			ampButtonGroup->button(amp_mode)->setChecked(true);
-			ampButtonGroup->blockSignals(false);
-			outputGainBox->blockSignals(true);
-			outputGainBox->setCurrentIndex(output_ui_index);
-			outputGainBox->blockSignals(false);
-			headstageBox->blockSignals(true);
-			headstageBox->setCurrentIndex(headstage_config);
-			headstageBox->blockSignals(false);
-
-			updateDAQ();
+			updateGUI();
 			break;
 		
 		case MODIFY:
 			input_channel = getParameter("Input Channel").toInt();
 			output_channel = getParameter("Output Channel").toInt();
-			output_ui_index = getParameter("Output Gain").toInt();
-			headstage_config = getParameter("Headstage Configuration").toInt();
-			amp_mode = getParameter("Amplifier Mode").toInt();
-
-			inputBox->setValue(input_channel);
-			outputBox->setValue(output_channel);
-			ampButtonGroup->button(amp_mode)->setChecked(true);
-			outputGainBox->setCurrentIndex(output_ui_index);
-			headstageBox->setCurrentIndex(headstage_config);
+			output_gain = getParameter("Output Gain").toDouble();
+			headstage_gain = getParameter("Headstage Gain").toDouble();
+			if (amp_mode != getParameter("Amplifier Mode").toInt()) {
+				ampButtonGroup->button(amp_mode)->setStyleSheet("QRadioButton { font: normal; }");
+				ampButtonGroup->button(getParameter("Amplifier Mode").toInt())->setStyleSheet("QRadioButton { font: bold;}");
+				amp_mode = getParameter("Amplifier Mode").toInt();
+			}
 
 			updateDAQ();
+
+			inputBox->blacken();
+			outputBox->blacken();
+			headstageBox->blacken();
+			outputGainBox->blacken();
+			break;
+
+		case PAUSE:
+			inputBox->setEnabled(true);
+			outputBox->setEnabled(true);
+			outputGainBox->setEnabled(true);
+			headstageBox->setEnabled(true);
+			iclampButton->setEnabled(true);
+			vclampButton->setEnabled(true);
+			modifyButton->setEnabled(true);
+			break;
+
+		case UNPAUSE:
+			inputBox->setEnabled(false);
+			outputBox->setEnabled(false);
+			outputGainBox->setEnabled(false);
+			headstageBox->setEnabled(false);
+			iclampButton->setEnabled(false);
+			vclampButton->setEnabled(false);
+			modifyButton->setEnabled(false);
 			break;
 
 		default:
@@ -105,9 +143,9 @@ void AxoPatch::update(DefaultGUIModel::update_flags_t flag) {
 }
 
 void AxoPatch::execute(void) {
-	if (!auto_on) {
+/*	if (!auto_on) {
 		return;
-	}
+	}*/
 
 	if (input(0) < 3) temp_mode = 1; //ICLAMP
 	else temp_mode = 2; //VCLAMP
@@ -137,128 +175,183 @@ void AxoPatch::execute(void) {
 	}
 }
 
-void AxoPatch::updateMode(int value) {
-	amp_mode = value;
-	setParameter("Amplifier Mode", amp_mode);
+void AxoPatch::updateGUI(void) {
+	inputBox->setValue(input_channel);
+	outputBox->setValue(output_channel);
+
+	if (headstage_gain == .1) {
+		headstageBox->setCurrentIndex(2);
+	} else {
+		headstageBox->setCurrentIndex(0);
+	}
+
+	if (output_gain == .1) {
+		outputGainBox->setCurrentIndex(0);
+	} else if (output_gain == .2) {
+		outputGainBox->setCurrentIndex(1);
+	} else if (output_gain == .5) {
+		outputGainBox->setCurrentIndex(2);
+	} else if (output_gain == 1) {
+		outputGainBox->setCurrentIndex(3);
+	} else if (output_gain == 2) {
+		outputGainBox->setCurrentIndex(4);
+	} else if (output_gain == 5) {
+		outputGainBox->setCurrentIndex(5);
+	} else if (output_gain == 10) {
+		outputGainBox->setCurrentIndex(6);
+	} else if (output_gain == 20) {
+		outputGainBox->setCurrentIndex(7);
+	} else if (output_gain == 50) {
+		outputGainBox->setCurrentIndex(8);
+	} else if (output_gain == 100) {
+		outputGainBox->setCurrentIndex(9);
+	} else if (output_gain == 200) {
+		outputGainBox->setCurrentIndex(10);
+	} else if (output_gain == 500) {
+		outputGainBox->setCurrentIndex(11);
+	} else {
+		outputGainBox->setCurrentIndex(0);
+	}
 	
-	if (!settings_changed) {
-		settings_changed = true;
-		updateDAQ();
+	switch(amp_mode) {
+		case 1:
+			ampButtonGroup->button(1)->setChecked(true);
+			ampButtonGroup->button(1)->setStyleSheet("QRadioButton { font: bold; }");
+			ampButtonGroup->button(2)->setStyleSheet("QRadioButton { font: normal; }");
+		case 2:
+			ampButtonGroup->button(2)->setChecked(true);
+			ampButtonGroup->button(2)->setStyleSheet("QRadioButton { font: bold; }");
+			ampButtonGroup->button(1)->setStyleSheet("QRadioButton { font: normal; }");
+		default:
+			ampButtonGroup->button(1)->setChecked(true);
+			ampButtonGroup->button(1)->setStyleSheet("QRadioButton { font: bold; }");
+			ampButtonGroup->button(2)->setStyleSheet("QRadioButton { font: normal; }");
+	}
+}
+
+void AxoPatch::updateMode(int value) {
+	for (std::map<QString, param_t>::iterator i = parameter.begin(); i != parameter.end(); ++i) {
+		if (i->first == "Amplifier Mode") {
+			i->second.edit->setText(QString::number(value));
+			i->second.edit->setModified(true);
+			break;
+		}
 	}
 }
 
 void AxoPatch::updateOutputGain(int value) {
-	output_ui_index = value;
-	setParameter("Output Gain", output_ui_index);
+	double temp_value;
 
 	switch(value) {
 		case 0:
-			output_gain = .5;
+			temp_value = .1;
 			break;
 		case 1:
-			output_gain = 1;
+			temp_value = .2;
 			break;
 		case 2:
-			output_gain = 2;
+			temp_value = .5;
 			break;
 		case 3:
-			output_gain = 5;
+			temp_value = 1;
 			break;
 		case 4:
-			output_gain = 10;
+			temp_value = 2;
 			break;
 		case 5:
-			output_gain = 20;
+			temp_value = 5;
 			break;
 		case 6:
-			output_gain = 50;
+			temp_value = 10;
 			break;
 		case 7:
-			output_gain = 100;
+			temp_value = 20;
 			break;
 		case 8:
-			output_gain = 200;
+			temp_value = 50;
 			break;
 		case 9:
-			output_gain = 500;
+			temp_value = 100;
+			break;
+		case 10:
+			temp_value = 200;
+			break;
+		case 11:
+			temp_value = 500;
 			break;
 		default:
-			output_gain = 0;
+			temp_value = 0;
 			break;
 	}
 
-	if (!settings_changed) {
-		settings_changed = true;
-		updateDAQ();
+	for (std::map<QString, param_t>::iterator i = parameter.begin(); i != parameter.end(); ++i) {
+		if (i->first == "Output Gain") {
+			i->second.edit->setText(QString::number(temp_value));
+			i->second.edit->setModified(true);
+			break;
+		}
 	}
 }
 
-void AxoPatch::updateHeadstageBox(int value) {
-	headstage_config = value;
-	setParameter("Headstage Configuration", headstage_config);
+void AxoPatch::updateHeadstageGain(int value) {
+	double temp_value;
 
 	switch(value) {
 		case 2: 
-			headstage_gain = .1;
+			temp_value = .1;
 			break;
 
 		default:
-			headstage_gain = 1;
+			temp_value = 1;
 			break;
 	}
 
-	if (!settings_changed) {
-		settings_changed = true;
-		updateDAQ();
+	for (std::map<QString, param_t>::iterator i = parameter.begin(); i != parameter.end(); ++i) {
+		if (i->first == "Headstage Gain") {
+			i->second.edit->setText(QString::number(temp_value));
+			i->second.edit->setModified(true);
+			break;
+		}
 	}
 }
 
 void AxoPatch::updateOutputChannel(int value) {
-	output_channel = value;
-	setParameter("Output Channel", output_channel);
-
-	if (!settings_changed) {
-		settings_changed = true;
-		updateDAQ();
+	for (std::map<QString, param_t>::iterator i = parameter.begin(); i != parameter.end(); ++i) {
+		if (i->first == "Output Channel") {
+			i->second.edit->setText(QString::number(value));
+			i->second.edit->setModified(true);
+			break;
+		}
 	}
 }
 
 void AxoPatch::updateInputChannel(int value) {
-	input_channel = value;
-	setParameter("Input Channel", input_channel);
-	
-	if (!settings_changed) {
-		settings_changed = true;
-		updateDAQ();
+	for (std::map<QString, param_t>::iterator i = parameter.begin(); i != parameter.end(); ++i) {
+		if (i->first == "Input Channel") {
+			i->second.edit->setText(QString::number(value));
+			i->second.edit->setModified(true);
+			break;
+		}
 	}
 }
-
-void AxoPatch::toggleAutoMode(bool on) {
-	if (on) {
-		auto_on = true;
-		iclampButton->setEnabled(false);
-		vclampButton->setEnabled(false);
-		outputGainBox->setEnabled(false);
-	}
-	else {
-		auto_on = false;
-		iclampButton->setEnabled(true);
-		vclampButton->setEnabled(true);
-		outputGainBox->setEnabled(true);
-		updateDAQ();
-	}
-	setActive(on);
-};
 
 void AxoPatch::updateDAQ(void) {
 	if (!device) return;
 
-//	std::cout<<"Nope, didn't return"<<std::endl;
+	std::cout<<"Nope, didn't return"<<std::endl;
+	std::cout<<"Data\t"<<amp_mode<<"\t"<<input_channel<<"\t"<<output_channel<<"\t"<<output_gain<<"\t"<<headstage_gain<<std::endl;
+	std::cout<<iclamp_ai_gain<<"\t"<<iclamp_ao_gain<<"\t"<<vclamp_ai_gain<<"\t"<<vclamp_ao_gain<<std::endl<<std::endl;
 //	return;
+	
 	switch(amp_mode) {
 		case 1: //IClamp
 			device->setAnalogRange(DAQ::AI, input_channel, 0);
-			device->setAnalogGain(DAQ::AI, input_channel, iclamp_ai_gain*output_gain*headstage_gain);
+			std::cout<<"Flag1"<<std::endl;
+			if (!getActive()) {
+				device->setAnalogGain(DAQ::AI, input_channel, iclamp_ai_gain/output_gain*headstage_gain);
+			} else {
+				device->setAnalogGain(DAQ::AI, input_channel, iclamp_ai_gain/output_gain);
+			}
 			device->setAnalogGain(DAQ::AO, output_channel, iclamp_ao_gain*headstage_gain);
 			device->setAnalogCalibration(DAQ::AO, output_channel);
 			device->setAnalogCalibration(DAQ::AI, input_channel);
@@ -266,7 +359,11 @@ void AxoPatch::updateDAQ(void) {
 
 		case 2: //VClamp
 			device->setAnalogRange(DAQ::AI, input_channel, 0);
-			device->setAnalogGain(DAQ::AI, input_channel, vclamp_ai_gain*output_gain*headstage_gain);
+			if (!getActive()) {
+				device->setAnalogGain(DAQ::AI, input_channel, vclamp_ai_gain/output_gain*headstage_gain);
+			} else {
+				device->setAnalogGain(DAQ::AI, input_channel, vclamp_ai_gain/output_gain);
+			}
 			device->setAnalogGain(DAQ::AO, output_channel, vclamp_ao_gain);
 			device->setAnalogCalibration(DAQ::AO, output_channel);
 			device->setAnalogCalibration(DAQ::AI, input_channel);
@@ -276,22 +373,27 @@ void AxoPatch::updateDAQ(void) {
 			std::cout<<"ERROR. Something went horribly wrong.\n The amplifier mode is set to an unknown value"<<std::endl;
 			break;
 	}
-
-	settings_changed = false;
 };
+
 
 void AxoPatch::customizeGUI(void) {
 	QGridLayout *customLayout = DefaultGUIModel::getLayout();
 	
 	customLayout->itemAtPosition(1,0)->widget()->setVisible(false);
-	customLayout->itemAtPosition(10,0)->widget()->setVisible(false);
+//	customLayout->itemAtPosition(10,0)->widget()->setVisible(false);
+	DefaultGUIModel::pauseButton->setText("Auto");
+	DefaultGUIModel::modifyButton->setText("Set DAQ");
+	DefaultGUIModel::unloadButton->setVisible(false);
 
 	// create input spinboxes
 	QGroupBox *ioBox = new QGroupBox;
 	QHBoxLayout *ioBoxLayout = new QHBoxLayout;
 	ioBox->setLayout(ioBoxLayout);
-	inputBox = new QSpinBox;
-	outputBox = new QSpinBox;
+	inputBox = new AxoPatchSpinBox;
+	inputBox->setRange(0,100);
+	outputBox = new AxoPatchSpinBox;//QSpinBox;
+	outputBox->setRange(0,100);
+	
 	QLabel *inputBoxLabel = new QLabel("Input");
 	QLabel *outputBoxLabel = new QLabel("Output");
 	ioBoxLayout->addWidget(inputBoxLabel);
@@ -300,24 +402,28 @@ void AxoPatch::customizeGUI(void) {
 	ioBoxLayout->addWidget(outputBox);
 
 	// create gain and amplifer mode comboboxes
+	QGroupBox *comboBoxGroup = new QGroupBox;
 	QFormLayout *comboBoxLayout = new QFormLayout;
-	headstageBox = new QComboBox;
+	headstageBox = new AxoPatchComboBox;
 	headstageBox->insertItem( 0, trUtf8("\x50\x61\x74\x63\x68\x20\xce\xb2\x3d\x31") );
 	headstageBox->insertItem( 1, trUtf8( "\x57\x68\x6f\x6c\x65\x20\x43\x65\x6c\x6c\x20\xce\xb2\x3d\x31" ) );
 	headstageBox->insertItem( 2, trUtf8( "\x57\x68\x6f\x6c\x65\x20\x43\x65\x6c\x6c\x20\xce\xb2\x3d\x30\x2e\x31" ) );
-	outputGainBox = new QComboBox;
-	outputGainBox->insertItem( 0, tr("0.5") );
-	outputGainBox->insertItem( 1, tr("1") );
-	outputGainBox->insertItem( 2, tr("2") );
-	outputGainBox->insertItem( 3, tr("5") );
-	outputGainBox->insertItem( 4, tr("10") );
-	outputGainBox->insertItem( 5, tr("20") );
-	outputGainBox->insertItem( 6, tr("50") );
-	outputGainBox->insertItem( 7, tr("100") );
-	outputGainBox->insertItem( 8, tr("200") );
-	outputGainBox->insertItem( 9, tr("500") );
+	outputGainBox = new AxoPatchComboBox;
+	outputGainBox->insertItem( 0, tr("0.1") );
+	outputGainBox->insertItem( 1, tr("0.2") );
+	outputGainBox->insertItem( 2, tr("0.5") );
+	outputGainBox->insertItem( 3, tr("1") );
+	outputGainBox->insertItem( 4, tr("2") );
+	outputGainBox->insertItem( 5, tr("5") );
+	outputGainBox->insertItem( 6, tr("10") );
+	outputGainBox->insertItem( 7, tr("20") );
+	outputGainBox->insertItem( 8, tr("50") );
+	outputGainBox->insertItem( 9, tr("100") );
+	outputGainBox->insertItem( 10, tr("200") );
+	outputGainBox->insertItem( 11, tr("500") );
 	comboBoxLayout->addRow("Output Gain", outputGainBox);
 	comboBoxLayout->addRow("Headstage", headstageBox);
+	comboBoxGroup->setLayout(comboBoxLayout);
 
 	// create amp mode groupbox
 	QGroupBox *ampModeBox = new QGroupBox;
@@ -330,19 +436,16 @@ void AxoPatch::customizeGUI(void) {
 	vclampButton = new QRadioButton("VClamp");
 	vclampButton->setCheckable(true);
 	ampButtonGroup->addButton(vclampButton, 2);
-	autoButton = new QPushButton("Auto");
-	autoButton->setCheckable(true);
 	ampModeLabel = new QLabel;
 	ampModeLabel->setText("Amp Mode");
 	ampModeLabel->setAlignment(Qt::AlignCenter);
 
 	QVBoxLayout *row2Layout = new QVBoxLayout;
-	row2Layout->addWidget(autoButton);
 	row2Layout->addWidget(ampModeLabel);
 	ampModeBoxLayout->addLayout(row2Layout);
 	
 	QVBoxLayout *row1Layout = new QVBoxLayout;
-	row1Layout->setAlignment(Qt::AlignRight);
+//	row1Layout->setAlignment(Qt::AlignRight);
 	row1Layout->addWidget(iclampButton);
 	row1Layout->addWidget(vclampButton);
 	ampButtonGroup->setExclusive(true);
@@ -350,14 +453,34 @@ void AxoPatch::customizeGUI(void) {
 
 	// add widgets to custom layout
 	customLayout->addWidget(ioBox, 0, 0);
-	customLayout->addLayout(comboBoxLayout, 2, 0);
+//	customLayout->addLayout(comboBoxLayout, 2, 0);
+	customLayout->addWidget(comboBoxGroup, 2, 0);
 	customLayout->addWidget(ampModeBox, 3, 0);
 	setLayout(customLayout);
 
 	QObject::connect(ampButtonGroup, SIGNAL(buttonPressed(int)), this, SLOT(updateMode(int)));
 	QObject::connect(outputGainBox, SIGNAL(activated(int)), this, SLOT(updateOutputGain(int)));
-	QObject::connect(headstageBox, SIGNAL(activated(int)), this, SLOT(updateHeadstageBox(int)));
+	QObject::connect(headstageBox, SIGNAL(activated(int)), this, SLOT(updateHeadstageGain(int)));
 	QObject::connect(inputBox, SIGNAL(valueChanged(int)), this, SLOT(updateInputChannel(int)));
 	QObject::connect(outputBox, SIGNAL(valueChanged(int)), this, SLOT(updateOutputChannel(int)));
-	QObject::connect(autoButton, SIGNAL(toggled(bool)), this, SLOT(toggleAutoMode(bool)));
+}
+
+void AxoPatch::refresh(void) {
+	for (std::map<QString, param_t>::iterator i = parameter.begin(); i!= parameter.end(); ++i) {
+		if (i->second.type & (STATE | EVENT)) {
+			i->second.edit->setText(QString::number(getValue(i->second.type, i->second.index)));
+			palette.setBrush(i->second.edit->foregroundRole(), Qt::darkGray);
+			i->second.edit->setPalette(palette);
+		} else if ((i->second.type & PARAMETER) && !i->second.edit->isModified() && i->second.edit->text() != *i->second.str_value) {
+			i->second.edit->setText(*i->second.str_value);
+		} else if ((i->second.type & COMMENT) && !i->second.edit->isModified() && i->second.edit->text() != QString::fromStdString(getValueString(COMMENT, i->second.index))) {
+			i->second.edit->setText(QString::fromStdString(getValueString(COMMENT, i->second.index)));
+		}
+	}
+	pauseButton->setChecked(!getActive());
+
+	if (settings_changed) {
+		updateDAQ();
+		settings_changed = false;
+	}
 }
