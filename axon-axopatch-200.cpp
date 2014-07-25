@@ -2,6 +2,7 @@
 #include <iostream>
 #include "axon-axopatch-200.h"
 
+// Create wrapper for QComboBox. Options go red when changed and black when 'Set DAQ' is hit.
 AxoPatchComboBox::AxoPatchComboBox(QWidget *parent) : QComboBox(parent) {
 	QObject::connect(this, SIGNAL(activated(int)), this, SLOT(redden(void)));
 }
@@ -18,8 +19,8 @@ void AxoPatchComboBox::redden(void) {
 	this->setPalette(palette);
 }
 
-
-
+// Create wrapper for spinboxes. Function is analogous to AxoPatchComboBox
+// SpinBox was used instead of DefaultGUILineEdit because palette.setBrush(etc...) doesn't change colors when changes are done programmatically. 
 AxoPatchSpinBox::AxoPatchSpinBox(QWidget *parent) : QSpinBox(parent) {
 	QObject::connect(this, SIGNAL(valueChanged(int)), this, SLOT(redden(void)));
 }
@@ -37,29 +38,32 @@ void AxoPatchSpinBox::redden(void) {
 }
 
 
-
+/* This is the real deal, the definitions for all the AxoPatch functions.
+ */
 extern "C" Plugin::Object * createRTXIPlugin(void) {
 	return new AxoPatch();
 };
 
 static DefaultGUIModel::variable_t vars[] = {
-	{ "Mode Telegraph", "", DefaultGUIModel::INPUT, },
-	{ "Gain Telegraph", "", DefaultGUIModel::INPUT, },
-	{ "Input Channel", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, },
+	{ "Mode Telegraph", "", DefaultGUIModel::INPUT, }, // telegraph from DAQ used in 'Auto' mode
+	{ "Gain Telegraph", "", DefaultGUIModel::INPUT, }, // telegraph from DAQ used in 'Auto' mode
+	{ "Input Channel", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, }, 
 	{ "Output Channel", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, },
-	{ "Headstage Gain", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::DOUBLE, },
+	{ "Headstage Gain", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::DOUBLE, }, 
 	{ "Output Gain", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::DOUBLE, }, 
 	{ "Amplifier Mode", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, },
 };
 
 static size_t num_vars = sizeof(vars) / sizeof(DefaultGUIModel::variable_t);
 
+// Definition of global function used to get all DAQ devices available. Copied from legacy version of program. -Ansel
 static void getDevice(DAQ::Device *d, void *p) {
 	DAQ::Device **device = reinterpret_cast<DAQ::Device **>(p);
 
 	if (!*device) *device = d;
 }
 
+// Just the constructor. 
 AxoPatch::AxoPatch(void) : DefaultGUIModel("AxoPatch 200 Controller", ::vars, ::num_vars) {
 	setWhatsThis("<p>Yeah, I'll get to this later... <br>-Ansel</p>");
 	DefaultGUIModel::createGUI(vars, num_vars);
@@ -80,6 +84,7 @@ void AxoPatch::initParameters(void) {
 	device = 0;
 	DAQ::Manager::getInstance()->foreachDevice(getDevice, &device);
 
+	// these are amplifier-specific settings. 
 	iclamp_ai_gain = 1; // (1 V/V)
 	iclamp_ao_gain = 1.0 / 2e-9; // (2 nA/V)
 	izero_ai_gain = 1; // (1 V/V)
@@ -88,8 +93,11 @@ void AxoPatch::initParameters(void) {
 	vclamp_ao_gain = 1 / 20e-3; // (20 mV/V)
 };
 
+
 void AxoPatch::update(DefaultGUIModel::update_flags_t flag) {
+
 	switch(flag) {
+		// initialize the parameters and then the GUI. 
 		case INIT:
 			setParameter("Input Channel", input_channel);
 			setParameter("Output Channel", output_channel);
@@ -112,13 +120,16 @@ void AxoPatch::update(DefaultGUIModel::update_flags_t flag) {
 			}
 
 			updateDAQ();
+			updateGUI(); // only needed here because doLoad doesn't update the gui on its own. Yes, it does cause a bug with the headstage option, but it doesn't matter to anything other than whatever OCD tendencies we all probably have. You're welcome. -Ansel
 
+			// blacken the GUI to reflect that changes have been saved to variables.
 			inputBox->blacken();
 			outputBox->blacken();
 			headstageBox->blacken();
 			outputGainBox->blacken();
 			break;
 
+		// disable the all the buttons in Auto mode. Auto mode does everything on its own.
 		case PAUSE:
 			inputBox->setEnabled(true);
 			outputBox->setEnabled(true);
@@ -128,7 +139,8 @@ void AxoPatch::update(DefaultGUIModel::update_flags_t flag) {
 			vclampButton->setEnabled(true);
 			modifyButton->setEnabled(true);
 			break;
-
+		
+		//when unpaused, return gui functionality to the user.
 		case UNPAUSE:
 			inputBox->setEnabled(false);
 			outputBox->setEnabled(false);
@@ -145,14 +157,17 @@ void AxoPatch::update(DefaultGUIModel::update_flags_t flag) {
 }
 
 void AxoPatch::execute(void) {
+	// check the mode telegraph
 	if (input(0) < 3) temp_mode = 1; //ICLAMP
 	else temp_mode = 2; //VCLAMP
 	
+	// if the settings changed, the gui will need to reflect that. 'settings_changed' is the flag
 	if (temp_mode != amp_mode) {
 		amp_mode = temp_mode;
 		settings_changed = true;
 	}
 	
+	// check the gain telegraph
 	if (input(1) <= .75) temp_gain = .05;
 	else if (input(1) <= 1.25) temp_gain = .1;
 	else if (input(1) <= 1.75) temp_gain = .2;
@@ -167,22 +182,27 @@ void AxoPatch::execute(void) {
 	else if (input(1) <= 6.25) temp_gain = 200;
 	else if (input(1) <= 6.75) temp_gain = 500;
 
+	// if the gain changed, set a flag to tell the gui to update itself. As the gui currently doesn't show the gain, this is a bit of a waste. -Ansel
 	if (temp_gain != output_gain) {
 		output_gain = temp_gain;
 		settings_changed = true;
 	}
 }
 
+// used solely for initializing the gui when the module is opened or loaded via doLoad
 void AxoPatch::updateGUI(void) {
+	// set the i/o channels
 	inputBox->setValue(input_channel);
 	outputBox->setValue(output_channel);
 
+	// set the headstage gain. gain=1 defaults to the first combobox option. 
 	if (headstage_gain == .1) {
 		headstageBox->setCurrentIndex(2);
 	} else {
 		headstageBox->setCurrentIndex(0);
 	}
 
+	// check the saved output_gain and match the value to the index of the combobox item that shows that value. 
 	if (output_gain == .1) {
 		outputGainBox->setCurrentIndex(0);
 	} else if (output_gain == .2) {
@@ -211,6 +231,7 @@ void AxoPatch::updateGUI(void) {
 		outputGainBox->setCurrentIndex(0);
 	}
 	
+	// set the amplifier mode. The mode currently set is in bold.
 	switch(amp_mode) {
 		case 1:
 			ampButtonGroup->button(1)->setChecked(true);
@@ -227,6 +248,7 @@ void AxoPatch::updateGUI(void) {
 	}
 }
 
+// update the text in the block made by createGUI whenever the mode option changes. 
 void AxoPatch::updateMode(int value) {
 	for (std::map<QString, param_t>::iterator i = parameter.begin(); i != parameter.end(); ++i) {
 		if (i->first == "Amplifier Mode") {
@@ -237,6 +259,7 @@ void AxoPatch::updateMode(int value) {
 	}
 }
 
+// update the gain text in the hidden block made by createGUI whenever the combobox item changes
 void AxoPatch::updateOutputGain(int value) {
 	double temp_value;
 
@@ -282,6 +305,7 @@ void AxoPatch::updateOutputGain(int value) {
 			break;
 	}
 
+	// yes, it's messy, but it ensures that values are saved as parameters
 	for (std::map<QString, param_t>::iterator i = parameter.begin(); i != parameter.end(); ++i) {
 		if (i->first == "Output Gain") {
 			i->second.edit->setText(QString::number(temp_value));
@@ -291,6 +315,8 @@ void AxoPatch::updateOutputGain(int value) {
 	}
 }
 
+
+// updates the headstage gain in the exact same manner as updateOutputGain
 void AxoPatch::updateHeadstageGain(int value) {
 	double temp_value;
 
@@ -313,6 +339,7 @@ void AxoPatch::updateHeadstageGain(int value) {
 	}
 }
 
+// updates the output channel text whenever the value in the gui spinbox changes.
 void AxoPatch::updateOutputChannel(int value) {
 	for (std::map<QString, param_t>::iterator i = parameter.begin(); i != parameter.end(); ++i) {
 		if (i->first == "Output Channel") {
@@ -323,6 +350,7 @@ void AxoPatch::updateOutputChannel(int value) {
 	}
 }
 
+// updates input channel
 void AxoPatch::updateInputChannel(int value) {
 	for (std::map<QString, param_t>::iterator i = parameter.begin(); i != parameter.end(); ++i) {
 		if (i->first == "Input Channel") {
@@ -333,6 +361,7 @@ void AxoPatch::updateInputChannel(int value) {
 	}
 }
 
+// updates the DAQ settings whenever the 'Set DAQ' button is pressed or when Auto mode detects a need for it.
 void AxoPatch::updateDAQ(void) {
 	if (!device) return;
 
@@ -340,6 +369,7 @@ void AxoPatch::updateDAQ(void) {
 		case 1: //IClamp
 			device->setAnalogRange(DAQ::AI, input_channel, 0);
 			std::cout<<"Flag1"<<std::endl;
+			// in Auto mode, the gain telegraph takes headstage_gain into account, so the if statement is needed
 			if (!getActive()) {
 				device->setAnalogGain(DAQ::AI, input_channel, iclamp_ai_gain/output_gain*headstage_gain);
 			} else {
@@ -352,6 +382,7 @@ void AxoPatch::updateDAQ(void) {
 
 		case 2: //VClamp
 			device->setAnalogRange(DAQ::AI, input_channel, 0);
+			// in Auto mode, the gain telegraph takes headstage_gain into account, so the if statement is needed
 			if (!getActive()) {
 				device->setAnalogGain(DAQ::AI, input_channel, vclamp_ai_gain/output_gain*headstage_gain);
 			} else {
@@ -368,7 +399,15 @@ void AxoPatch::updateDAQ(void) {
 	}
 };
 
-
+/* 
+ * Sets up the GUI. It's a bit messy. These are the important things to remember:
+ *   1. The parameter/state block created by DefaultGUIModel is HIDDEN. 
+ *   2. The Unload button is hidden, Pause is renamed 'Auto', and Modify is renamed 'Set DAQ'
+ *   3. All GUI changes are connected to their respective text boxes in the hidden block
+ *   4. 'Set DAQ' updates the values of inner variables with GUI choices linked to the text boxes
+ * 
+ * Okay, here we go!
+ */
 void AxoPatch::customizeGUI(void) {
 	QGridLayout *customLayout = DefaultGUIModel::getLayout();
 	
@@ -381,9 +420,9 @@ void AxoPatch::customizeGUI(void) {
 	QGroupBox *ioBox = new QGroupBox;
 	QHBoxLayout *ioBoxLayout = new QHBoxLayout;
 	ioBox->setLayout(ioBoxLayout);
-	inputBox = new AxoPatchSpinBox;
+	inputBox = new AxoPatchSpinBox; // this is the QSpinBox wrapper made earlier
 	inputBox->setRange(0,100);
-	outputBox = new AxoPatchSpinBox;//QSpinBox;
+	outputBox = new AxoPatchSpinBox;
 	outputBox->setRange(0,100);
 	
 	QLabel *inputBoxLabel = new QLabel("Input");
@@ -397,6 +436,7 @@ void AxoPatch::customizeGUI(void) {
 	QGroupBox *comboBoxGroup = new QGroupBox;
 	QFormLayout *comboBoxLayout = new QFormLayout;
 	headstageBox = new AxoPatchComboBox;
+		// this part copied from the legacy version. -Ansel
 	headstageBox->insertItem( 0, trUtf8("\x50\x61\x74\x63\x68\x20\xce\xb2\x3d\x31") );
 	headstageBox->insertItem( 1, trUtf8( "\x57\x68\x6f\x6c\x65\x20\x43\x65\x6c\x6c\x20\xce\xb2\x3d\x31" ) );
 	headstageBox->insertItem( 2, trUtf8( "\x57\x68\x6f\x6c\x65\x20\x43\x65\x6c\x6c\x20\xce\xb2\x3d\x30\x2e\x31" ) );
@@ -448,6 +488,7 @@ void AxoPatch::customizeGUI(void) {
 	customLayout->addWidget(ampModeBox, 3, 0);
 	setLayout(customLayout);
 
+	// connect the widgets to the signals
 	QObject::connect(ampButtonGroup, SIGNAL(buttonPressed(int)), this, SLOT(updateMode(int)));
 	QObject::connect(outputGainBox, SIGNAL(activated(int)), this, SLOT(updateOutputGain(int)));
 	QObject::connect(headstageBox, SIGNAL(activated(int)), this, SLOT(updateHeadstageGain(int)));
@@ -455,6 +496,8 @@ void AxoPatch::customizeGUI(void) {
 	QObject::connect(outputBox, SIGNAL(valueChanged(int)), this, SLOT(updateOutputChannel(int)));
 }
 
+
+// overload the refresh function to display Auto mode settings and update the DAQ (when in Auto)
 void AxoPatch::refresh(void) {
 	for (std::map<QString, param_t>::iterator i = parameter.begin(); i!= parameter.end(); ++i) {
 		if (i->second.type & (STATE | EVENT)) {
