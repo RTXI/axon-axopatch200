@@ -71,6 +71,7 @@ AxoPatch::AxoPatch(void) : DefaultGUIModel("AxoPatch 200 Controller", ::vars, ::
 	customizeGUI();
 	update( INIT );
 	DefaultGUIModel::refresh();
+	QTimer::singleShot(0, this, SLOT(resizeMe()));
 };
 
 AxoPatch::~AxoPatch(void) {};
