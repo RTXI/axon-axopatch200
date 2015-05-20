@@ -9,13 +9,11 @@ AxoPatchComboBox::AxoPatchComboBox(QWidget *parent) : QComboBox(parent) {
 AxoPatchComboBox::~AxoPatchComboBox(void) {}
 
 void AxoPatchComboBox::blacken(void) {
-	palette.setColor(QPalette::Text, Qt::black);
-	this->setPalette(palette);
+	this->setStyleSheet("QComboBox { color:black; }");
 }
 
 void AxoPatchComboBox::redden(void) {
-	palette.setColor(QPalette::Text, Qt::red);
-	this->setPalette(palette);
+	this->setStyleSheet("QComboBox { color:red; }");
 }
 
 // Create wrapper for spinboxes. Function is analogous to AxoPatchComboBox
@@ -27,13 +25,11 @@ AxoPatchSpinBox::AxoPatchSpinBox(QWidget *parent) : QSpinBox(parent) {
 AxoPatchSpinBox::~AxoPatchSpinBox(void) {}
 
 void AxoPatchSpinBox::blacken(void) {
-	palette.setColor(QPalette::Text, Qt::black);
-	this->setPalette(palette);
+	this->setStyleSheet("QSpinBox { color:black; }");
 }
 
 void AxoPatchSpinBox::redden(void) {
-	palette.setColor(QPalette::Text, Qt::red);
-	this->setPalette(palette);
+	this->setStyleSheet("QSpinBox { color:red; }");
 }
 
 
