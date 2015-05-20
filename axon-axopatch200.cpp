@@ -73,7 +73,7 @@ AxoPatch::~AxoPatch(void) {};
 
 void AxoPatch::initParameters(void) {
 	input_channel = 0;
-	output_channel = 0;
+	output_channel = 1;
 	amp_mode = 1;
 	output_gain = headstage_gain = 1;
 
@@ -233,15 +233,15 @@ void AxoPatch::updateGUI(void) {
 			ampButtonGroup->button(1)->setChecked(true);
 			ampButtonGroup->button(1)->setStyleSheet("QRadioButton { font: bold; }");
 			ampButtonGroup->button(2)->setStyleSheet("QRadioButton { font: normal; }");
+			break;
 		case 2:
 			ampButtonGroup->button(2)->setChecked(true);
 			ampButtonGroup->button(2)->setStyleSheet("QRadioButton { font: bold; }");
 			ampButtonGroup->button(1)->setStyleSheet("QRadioButton { font: normal; }");
+			break;
 		default:
-			std::cout<<"ERROR: default case called. Ansel done there f**ked up."<<std::endl;
-//			ampButtonGroup->button(1)->setChecked(true);
-//			ampButtonGroup->button(1)->setStyleSheet("QRadioButton { font: bold; }");
-//			ampButtonGroup->button(2)->setStyleSheet("QRadioButton { font: normal; }");
+			std::cout<<"ERROR: default case called. Now, you get to complain to me. - Ansel"<<std::endl;
+			break;
 	}
 }
 
@@ -407,7 +407,7 @@ void AxoPatch::updateDAQ(void) {
 void AxoPatch::customizeGUI(void) {
 	QGridLayout *customLayout = DefaultGUIModel::getLayout();
 	
-	customLayout->itemAtPosition(1,0)->widget()->setVisible(false);
+//	customLayout->itemAtPosition(1,0)->widget()->setVisible(false);
 	DefaultGUIModel::pauseButton->setText("Auto");
 	DefaultGUIModel::modifyButton->setText("Set DAQ");
 	DefaultGUIModel::unloadButton->setVisible(false);
