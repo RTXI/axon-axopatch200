@@ -238,9 +238,10 @@ void AxoPatch::updateGUI(void) {
 			ampButtonGroup->button(2)->setStyleSheet("QRadioButton { font: bold; }");
 			ampButtonGroup->button(1)->setStyleSheet("QRadioButton { font: normal; }");
 		default:
-			ampButtonGroup->button(1)->setChecked(true);
-			ampButtonGroup->button(1)->setStyleSheet("QRadioButton { font: bold; }");
-			ampButtonGroup->button(2)->setStyleSheet("QRadioButton { font: normal; }");
+			std::cout<<"ERROR: default case called. Ansel done there f**ked up."<<std::endl;
+//			ampButtonGroup->button(1)->setChecked(true);
+//			ampButtonGroup->button(1)->setStyleSheet("QRadioButton { font: bold; }");
+//			ampButtonGroup->button(2)->setStyleSheet("QRadioButton { font: normal; }");
 	}
 }
 
@@ -364,7 +365,6 @@ void AxoPatch::updateDAQ(void) {
 	switch(amp_mode) {
 		case 1: //IClamp
 			device->setAnalogRange(DAQ::AI, input_channel, 0);
-			std::cout<<"Flag1"<<std::endl;
 			// in Auto mode, the gain telegraph takes headstage_gain into account, so the if statement is needed
 			if (!getActive()) {
 				device->setAnalogGain(DAQ::AI, input_channel, iclamp_ai_gain/output_gain*headstage_gain);
