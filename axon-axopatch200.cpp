@@ -407,7 +407,7 @@ void AxoPatch::updateDAQ(void) {
 void AxoPatch::customizeGUI(void) {
 	QGridLayout *customLayout = DefaultGUIModel::getLayout();
 	
-//	customLayout->itemAtPosition(1,0)->widget()->setVisible(false);
+	customLayout->itemAtPosition(1,0)->widget()->setVisible(false);
 	DefaultGUIModel::pauseButton->setText("Auto");
 	DefaultGUIModel::modifyButton->setText("Set DAQ");
 	DefaultGUIModel::unloadButton->setVisible(false);
