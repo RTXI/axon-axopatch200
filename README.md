@@ -6,8 +6,10 @@
 ![Module GUI](axon-axopatch200.png)
 
 <!--start-->
-Amplifier control module to compensate for scaling properties of the Axon AxoPatch 200 controller. This module essentially acts as an interface that replicated functionality of the control panel, but in a manner specific to the controller's own functionality. 
+Amplifier control module to compensate for scaling properties of the Axon AxoPatch 200 controller. This module essentially acts as an interface that augments the control panel in that it allows you to set input/output gains with a few button clicks instead of manually entering every value.  
 <!--end-->
+
+**Note:** You will still need to open the system control panel to activate channels. This module will not do that for you.  
 
 ####Input Channels
 1. input(0) - Mode Telegraph : the telegraph used in Auto mode
