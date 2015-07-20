@@ -267,13 +267,8 @@ void AxoPatch::updateGUI(void) {
 
 // update the text in the block made by createGUI whenever the mode option changes. 
 void AxoPatch::updateMode(int value) {
-	for (std::map<QString, param_t>::iterator i = parameter.begin(); i != parameter.end(); ++i) {
-		if (i->first == "Amplifier Mode") {
-			i->second.edit->setText(QString::number(value));
-			i->second.edit->setModified(true);
-			break;
-		}
-	}
+	parameter["Amplifier Mode"].edit->setText(QString::number(value));
+	parameter["Amplifier Mode"].edit->setModified(true);
 }
 
 // update the gain text in the hidden block made by createGUI whenever the combobox item changes
@@ -322,14 +317,8 @@ void AxoPatch::updateOutputGain(int value) {
 			break;
 	}
 
-	// yes, it's messy, but it ensures that values are saved as parameters
-	for (std::map<QString, param_t>::iterator i = parameter.begin(); i != parameter.end(); ++i) {
-		if (i->first == "Output Gain") {
-			i->second.edit->setText(QString::number(temp_value));
-			i->second.edit->setModified(true);
-			break;
-		}
-	}
+	parameter["Output Gain"].edit->setText(QString::number(temp_value));
+	parameter["Output Gain"].edit->setModified(true);
 }
 
 
@@ -347,35 +336,20 @@ void AxoPatch::updateHeadstageGain(int value) {
 			break;
 	}
 
-	for (std::map<QString, param_t>::iterator i = parameter.begin(); i != parameter.end(); ++i) {
-		if (i->first == "Headstage Gain") {
-			i->second.edit->setText(QString::number(temp_value));
-			i->second.edit->setModified(true);
-			break;
-		}
-	}
+	parameter["Headstage Gain"].edit->setText(QString::number(temp_value));
+	parameter["Headstage Gain"].edit->setModified(true);
 }
 
 // updates the output channel text whenever the value in the gui spinbox changes.
 void AxoPatch::updateOutputChannel(int value) {
-	for (std::map<QString, param_t>::iterator i = parameter.begin(); i != parameter.end(); ++i) {
-		if (i->first == "Output Channel") {
-			i->second.edit->setText(QString::number(value));
-			i->second.edit->setModified(true);
-			break;
-		}
-	}
+	parameter["Output Channel"].edit->setText(QString::number(value));
+	parameter["Output Channel"].edit->setModified(true);
 }
 
 // updates input channel
 void AxoPatch::updateInputChannel(int value) {
-	for (std::map<QString, param_t>::iterator i = parameter.begin(); i != parameter.end(); ++i) {
-		if (i->first == "Input Channel") {
-			i->second.edit->setText(QString::number(value));
-			i->second.edit->setModified(true);
-			break;
-		}
-	}
+	parameter["Input Channel"].edit->setText(QString::number(value));
+	parameter["Input Channel"].edit->setModified(true);
 }
 
 // updates the DAQ settings whenever the 'Set DAQ' button is pressed or when Auto mode detects a need for it.
