@@ -65,7 +65,7 @@ static DefaultGUIModel::variable_t vars[] = {
 	{ "Headstage Gain", "Headstage gain configuration setting", 
 	  DefaultGUIModel::PARAMETER | DefaultGUIModel::DOUBLE, }, 
 	{ "Output Gain", "Scaled output gain setting", DefaultGUIModel::PARAMETER | DefaultGUIModel::DOUBLE, }, 
-	{ "Amplifier Mode", "Amplifier mode (vclamp, iclamp, or i=0)", 
+	{ "Amplifier Mode", "Amplifier mode (vclamp or iclamp)", 
 	   DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, },
 };
 
@@ -93,7 +93,7 @@ AxoPatch::~AxoPatch(void) {};
 
 void AxoPatch::initParameters(void) {
 	input_channel = 0;
-	output_channel = 1;
+	output_channel = 0;
 	amp_mode = 1;
 	output_gain = headstage_gain = 1;
 

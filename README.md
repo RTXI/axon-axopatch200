@@ -23,7 +23,7 @@ None
 2. Output Channel - output channel to scale (#)
 3. Headstage Gain - gain set by the headstage
 4. Output Gain - output gain from amplifier
-5. Amplifier Mode - mode setting on the amplifier (vclamp, iclamp, or i=0)
+5. Amplifier Mode - mode setting on the amplifier (vclamp or iclamp)
 
 ####States
 None
