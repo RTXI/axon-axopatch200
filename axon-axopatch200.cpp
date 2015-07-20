@@ -147,24 +147,24 @@ void AxoPatch::update(DefaultGUIModel::update_flags_t flag) {
 
 		// disable the all the buttons in Auto mode. Auto mode does everything on its own.
 		case PAUSE:
-			inputBox->setEnabled(true);
-			outputBox->setEnabled(true);
+//			inputBox->setEnabled(true);
+//			outputBox->setEnabled(true);
 			outputGainBox->setEnabled(true);
-			headstageBox->setEnabled(true);
+//			headstageBox->setEnabled(true);
 			iclampButton->setEnabled(true);
 			vclampButton->setEnabled(true);
-			modifyButton->setEnabled(true);
+//			modifyButton->setEnabled(true);
 			break;
 		
 		//when unpaused, return gui functionality to the user.
 		case UNPAUSE:
-			inputBox->setEnabled(false);
-			outputBox->setEnabled(false);
+//			inputBox->setEnabled(false);
+//			outputBox->setEnabled(false);
 			outputGainBox->setEnabled(false);
-			headstageBox->setEnabled(false);
+//			headstageBox->setEnabled(false);
 			iclampButton->setEnabled(false);
 			vclampButton->setEnabled(false);
-			modifyButton->setEnabled(false);
+//			modifyButton->setEnabled(false);
 			break;
 
 		default:
