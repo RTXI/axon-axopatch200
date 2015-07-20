@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2011 Weill Medical College of Cornell University
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License as
+ *  published by the Free Software Foundation; either version 2 of the
+ *  License, or (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 #include <iostream>
 #include "axon-axopatch200.h"
 
@@ -40,13 +58,15 @@ extern "C" Plugin::Object * createRTXIPlugin(void) {
 };
 
 static DefaultGUIModel::variable_t vars[] = {
-	{ "Mode Telegraph", "", DefaultGUIModel::INPUT, }, // telegraph from DAQ used in 'Auto' mode
-	{ "Gain Telegraph", "", DefaultGUIModel::INPUT, }, // telegraph from DAQ used in 'Auto' mode
-	{ "Input Channel", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, }, 
-	{ "Output Channel", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, },
-	{ "Headstage Gain", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::DOUBLE, }, 
-	{ "Output Gain", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::DOUBLE, }, 
-	{ "Amplifier Mode", "", DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, },
+	{ "Mode Telegraph", "Input mode telegraph for auto mode", DefaultGUIModel::INPUT, }, // telegraph from DAQ used in 'Auto' mode
+	{ "Gain Telegraph", "Input gain telegraph for auto mode", DefaultGUIModel::INPUT, }, // telegraph from DAQ used in 'Auto' mode
+	{ "Input Channel", "Input channel (#)", DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, }, 
+	{ "Output Channel", "Output channel (#)", DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, },
+	{ "Headstage Gain", "Headstage gain configuration setting", 
+	  DefaultGUIModel::PARAMETER | DefaultGUIModel::DOUBLE, }, 
+	{ "Output Gain", "Scaled output gain setting", DefaultGUIModel::PARAMETER | DefaultGUIModel::DOUBLE, }, 
+	{ "Amplifier Mode", "Amplifier mode (vclamp, iclamp, or i=0)", 
+	   DefaultGUIModel::PARAMETER | DefaultGUIModel::INTEGER, },
 };
 
 static size_t num_vars = sizeof(vars) / sizeof(DefaultGUIModel::variable_t);
@@ -60,7 +80,7 @@ static void getDevice(DAQ::Device *d, void *p) {
 
 // Just the constructor. 
 AxoPatch::AxoPatch(void) : DefaultGUIModel("AxoPatch 200 Controller", ::vars, ::num_vars) {
-	setWhatsThis("<p>Yeah, I'll get to this later... <br>-Ansel</p>");
+	setWhatsThis("<p>Amplifier control module to compensate for scaling properties of the Axon AxoPatch 1D controller. This module essentially acts as an interface that replicates functionality of the control panel, but instead of manually setting gains, etc., you can do it at the press of a button. Note that you will still have to activate the channels via the control panel, though. .</p>");
 	DefaultGUIModel::createGUI(vars, num_vars);
 	initParameters();
 	customizeGUI();
