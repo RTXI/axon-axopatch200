@@ -1,4 +1,3 @@
-#include <QtGui>
 #include <daq.h>
 #include <default_gui_model.h>
 
